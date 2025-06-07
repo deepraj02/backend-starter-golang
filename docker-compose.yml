@@ -1,0 +1,22 @@
+services:
+  db:
+    container_name: "postgres-project"
+    image: postgres:12.4-alpine
+    volumes:
+      - "./postgres-data:/var/lib/postgresql/data:rw"
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    restart: unless-stopped
+
+  adminer:
+    container_name: "adminer"
+    image: adminer
+    ports:
+      - "9090:8080"
+    restart: unless-stopped
+    depends_on:
+      - db
