@@ -2,17 +2,18 @@ package app
 
 import (
 	"database/sql"
+
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/deepraj02/go-postgres-starter/internal/store"
-	"github.com/deepraj02/go-postgres-starter/internal/utils"
+	"github.com/deepraj02/go-postgres-starter/internal/utils/json"
+	"github.com/deepraj02/go-postgres-starter/internal/utils/logger"
 	"github.com/deepraj02/go-postgres-starter/migrations"
 )
 
 type Application struct {
-	Logger *log.Logger
+	Logger *logger.Logger
 	DB     *sql.DB
 }
 
@@ -25,7 +26,9 @@ func NewApplication() (*Application, error) {
 	if err != nil {
 		panic(err)
 	}
-	logger := log.New(os.Stdout, "app:", log.Ldate|log.Ltime|log.Lshortfile)
+	// logger := log.New(os.Stdout, "app:", log.Ldate|log.Ltime|log.Lshortfile)
+	logger := initializeLogger()
+
 	app := &Application{
 		Logger: logger,
 		DB:     pgDB,
@@ -33,12 +36,20 @@ func NewApplication() (*Application, error) {
 	return app, nil
 }
 
+func initializeLogger() *logger.Logger {
+	loggerInstance, err := logger.NewLogger("go-postgres-starter")
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	return loggerInstance
+}
+
 func (app *Application) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	if err := app.DB.Ping(); err != nil {
-		app.Logger.Printf("Health check failed: %v\n", err)
-		utils.WriteJson(w, http.StatusInternalServerError, utils.Envelope{"error": err.Error()})
+		app.Logger.Error("Health check failed: %v", err)
+		json.WriteJson(w, http.StatusInternalServerError, json.Envelope{"error": err.Error()})
 		return
 	}
-	app.Logger.Println("Health check passed")
-	utils.WriteJson(w, http.StatusOK, utils.Envelope{"status": "Healthy"})
+	app.Logger.Info("Health check passed")
+	json.WriteJson(w, http.StatusOK, json.Envelope{"status": "Healthy"})
 }

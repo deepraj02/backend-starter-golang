@@ -28,10 +28,11 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	app.Logger.Printf("Starting application on port http://localhost:%d\n", port)
+	defer app.Logger.Close()
+	app.Logger.Info("Starting application on port http://localhost:%d", port)
 	err = server.ListenAndServe()
 	if err != nil {
-		app.Logger.Printf("Error starting server: %v\n", err)
+		app.Logger.Error("Error starting server: %v", err)
 		return
 	}
 }
