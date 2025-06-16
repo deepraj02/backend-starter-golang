@@ -24,20 +24,16 @@ func NewLogger(filePath string) (*Logger, error) {
 	}, nil
 }
 
-func (l *Logger) Info(message string, interfaceArgs ...interface{}) {
-	if len(interfaceArgs) > 0 {
-		l.infoLogger.Printf(message, interfaceArgs...)
+func (l *Logger) Info(message string, args ...interface{}) {
+	if len(args) > 0 {
+		l.infoLogger.Printf(message, args...)
 	} else {
-		l.infoLogger.Print(message)
+		l.infoLogger.Printf("%s", message)
 	}
 }
 
-func (l *Logger) Error(message string, interfaceArgs ...interface{}) {
-	if len(interfaceArgs) > 0 {
-		l.errorLogger.Printf(message, interfaceArgs...)
-	} else {
-		l.errorLogger.Print(message)
-	}
+func (l *Logger) Error(message string, err error) {
+	l.errorLogger.Printf("%s: %v", message, err)
 }
 
 func (l *Logger) Close() {
