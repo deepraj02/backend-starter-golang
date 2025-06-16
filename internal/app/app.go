@@ -2,6 +2,7 @@ package app
 
 import (
 	"database/sql"
+	"time"
 
 	"log"
 	"net/http"
@@ -51,5 +52,6 @@ func (app *Application) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	app.Logger.Info("Health check passed")
+	time.Sleep(2 * time.Second)
 	json.WriteJson(w, http.StatusOK, json.Envelope{"status": "Healthy"})
 }
