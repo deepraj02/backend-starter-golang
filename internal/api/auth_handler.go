@@ -65,9 +65,18 @@ func (app *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.GenerateJWT(user.ID, user.Username)
+	accessToken, err := auth.GenerateJWT(user.ID, user.Email)
 	if err != nil {
-		app.logger.Error("Failed to generate token", err)
+		app.logger.Error("Failed to generate access token", err)
+		utils.WriteJson(w, http.StatusInternalServerError, utils.Envelope{
+			"error": "Failed to generate authentication token",
+		})
+		return
+	}
+
+	refreshToken, err := auth.GenerateRefreshToken(user.ID, user.Email)
+	if err != nil {
+		app.logger.Error("Failed to generate refresh token", err)
 		utils.WriteJson(w, http.StatusInternalServerError, utils.Envelope{
 			"error": "Failed to generate authentication token",
 		})
@@ -75,8 +84,11 @@ func (app *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := store.AuthResponse{
-		Token: token,
-		User:  *user,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    24 * 60 * 60, // 24 hours in seconds
+		User:         *user,
 	}
 
 	app.logger.Info("User registered successfully: %s", user.Username)
@@ -114,9 +126,18 @@ func (app *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.GenerateJWT(user.ID, user.Username)
+	accessToken, err := auth.GenerateJWT(user.ID, user.Email)
 	if err != nil {
-		app.logger.Error("Failed to generate token", err)
+		app.logger.Error("Failed to generate access token", err)
+		utils.WriteJson(w, http.StatusInternalServerError, utils.Envelope{
+			"error": "Failed to generate authentication token",
+		})
+		return
+	}
+
+	refreshToken, err := auth.GenerateRefreshToken(user.ID, user.Email)
+	if err != nil {
+		app.logger.Error("Failed to generate refresh token", err)
 		utils.WriteJson(w, http.StatusInternalServerError, utils.Envelope{
 			"error": "Failed to generate authentication token",
 		})
@@ -124,8 +145,11 @@ func (app *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := store.AuthResponse{
-		Token: token,
-		User:  *user,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    24 * 60 * 60, // 24 hours in seconds
+		User:         *user,
 	}
 
 	app.logger.Info("User logged in successfully: %s", user.Username)

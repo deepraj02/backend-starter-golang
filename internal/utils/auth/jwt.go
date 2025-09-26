@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,9 +14,12 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-const (
-	secretKey = "your-super-secret-jwt-key-change-this-in-production"
-)
+func getSecretKey() string {
+	if key := os.Getenv("JWT_SECRET"); key != "" {
+		return key
+	}
+	return "your-super-secret-jwt-key-change-this-in-production"
+}
 
 func GenerateJWT(userID int64, email string) (string, error) {
 	claims := Claims{
@@ -25,10 +29,11 @@ func GenerateJWT(userID int64, email string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			Subject:   email,
+			Issuer:    "backend-auth",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secretKey))
+	return token.SignedString([]byte(getSecretKey()))
 }
 
 func ValidateJWT(tokenString string) (*Claims, error) {
@@ -36,7 +41,7 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return []byte(secretKey), nil
+		return []byte(getSecretKey()), nil
 	})
 	if err != nil {
 		return nil, err
@@ -47,4 +52,20 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+
+func GenerateRefreshToken(userID int64, email string) (string, error) {
+	claims := Claims{
+		UserID: userID,
+		Email:  email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Subject:   email,
+			Issuer:    "backend-auth-refresh",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(getSecretKey()))
 }
