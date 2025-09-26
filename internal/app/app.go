@@ -7,15 +7,20 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/deepraj02/go-postgres-starter/internal/api"
+	"github.com/deepraj02/go-postgres-starter/internal/middleware"
 	"github.com/deepraj02/go-postgres-starter/internal/store"
+
 	"github.com/deepraj02/go-postgres-starter/internal/utils/json"
 	"github.com/deepraj02/go-postgres-starter/internal/utils/logger"
 	"github.com/deepraj02/go-postgres-starter/migrations"
 )
 
 type Application struct {
-	Logger *logger.Logger
-	DB     *sql.DB
+	Logger      *logger.Logger
+	DB          *sql.DB
+	AuthHandler *api.AuthHandler
+	Middleware  middleware.AuthMiddleware
 }
 
 func NewApplication() (*Application, error) {
@@ -29,10 +34,14 @@ func NewApplication() (*Application, error) {
 	}
 	// logger := log.New(os.Stdout, "app:", log.Ldate|log.Ltime|log.Lshortfile)
 	logger := initializeLogger()
-
+	authStore := store.NewPostgresAuthStore(pgDB)
+	authHandler := api.NewAuthHandler(authStore, logger)
+	authMiddleware := middleware.AuthMiddleware{AuthStore: authStore}
 	app := &Application{
-		Logger: logger,
-		DB:     pgDB,
+		Logger:      logger,
+		DB:          pgDB,
+		AuthHandler: authHandler,
+		Middleware:  authMiddleware,
 	}
 	return app, nil
 }

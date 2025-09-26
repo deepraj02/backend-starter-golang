@@ -8,5 +8,13 @@ import (
 func SetupRoutes(app *app.Application) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/health", app.HealthCheck)
+	r.Post("/auth/register", app.AuthHandler.Register)
+	r.Post("/auth/login", app.AuthHandler.Login)
+
+	r.Group(func(r chi.Router) {
+		r.Use(app.Middleware.Authenticate)
+		r.Get("/auth/profile", app.AuthHandler.Profile)
+	})
+
 	return r
 }
