@@ -8,5 +8,5 @@ start:
 .PHONY: stop
 stop:
 	@echo "Stopping Docker-Postgres"
-	docker compose down
+	docker compose down --remove-orphans --volumes
 

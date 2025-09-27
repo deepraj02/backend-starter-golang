@@ -24,7 +24,7 @@ func NewLogger(filePath string) (*Logger, error) {
 	}, nil
 }
 
-func (l *Logger) Info(message string, args ...interface{}) {
+func (l *Logger) Info(message string, args ...any) {
 	if len(args) > 0 {
 		l.infoLogger.Printf(message, args...)
 	} else {
@@ -33,9 +33,15 @@ func (l *Logger) Info(message string, args ...interface{}) {
 }
 
 func (l *Logger) Error(message string, err error) {
-	l.errorLogger.Printf("%s: %v", message, err)
+	if err != nil {
+		l.errorLogger.Printf("%s: %v", message, err)
+	} else {
+		l.errorLogger.Printf("%s", message)
+	}
 }
 
 func (l *Logger) Close() {
-	l.file.Close()
+	if l.file != nil {
+		l.file.Close()
+	}
 }
