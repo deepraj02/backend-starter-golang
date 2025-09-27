@@ -8,6 +8,8 @@ import (
 
 	"github.com/deepraj02/go-postgres-starter/internal/api"
 	"github.com/deepraj02/go-postgres-starter/internal/middleware"
+	"github.com/joho/godotenv"
+
 	"github.com/deepraj02/go-postgres-starter/internal/store"
 	"github.com/deepraj02/go-postgres-starter/internal/utils/json"
 	"github.com/deepraj02/go-postgres-starter/internal/utils/logger"
@@ -24,6 +26,11 @@ type Application struct {
 }
 
 func NewApplication() (*Application, error) {
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found or error loading .env file")
+	}
+
 	pgDB, redisClient, err := store.Open()
 	if err != nil {
 		return nil, err
@@ -35,7 +42,9 @@ func NewApplication() (*Application, error) {
 	// logger := log.New(os.Stdout, "app:", log.Ldate|log.Ltime|log.Lshortfile)
 	logger := initializeLogger()
 	authStore := store.NewPostgresAuthStore(pgDB)
-	authHandler := api.NewAuthHandler(authStore, logger)
+	cacheStore := store.NewRedisCacheStore(redisClient)
+	emailService := store.NewResendEmailService()
+	authHandler := api.NewAuthHandler(authStore, logger, cacheStore, emailService)
 	authMiddleware := middleware.AuthMiddleware{AuthStore: authStore}
 	app := &Application{
 		Logger:      logger,

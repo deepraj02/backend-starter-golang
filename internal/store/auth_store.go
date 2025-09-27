@@ -35,6 +35,15 @@ type AuthResponse struct {
 	User         User   `json:"user"`
 }
 
+type ForogtPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email"`
+	Code        string `json:"code"`
+	NewPassword string `json:"new_password"`
+}
 type PostgresAuthStore struct {
 	db *sql.DB
 }
@@ -47,6 +56,8 @@ type AuthStore interface {
 	CreateUser(user *User) error
 	GetUserByUsername(username string) (*User, error)
 	GetUserByID(id int64) (*User, error)
+	GetUserByEmail(email string) (*User, error)
+	UpdatePassword(email, hashedPassword string) error
 }
 
 func (s *PostgresAuthStore) CreateUser(user *User) error {
@@ -103,4 +114,46 @@ func (s *PostgresAuthStore) GetUserByID(id int64) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (s *PostgresAuthStore) GetUserByEmail(email string) (*User, error) {
+	user := User{}
+	query := `
+        SELECT id, username, email, password_hash, bio, created_at, updated_at
+        FROM users
+        WHERE email = $1`
+
+	err := s.db.QueryRow(query, email).Scan(
+		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
+		&user.Bio, &user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (s *PostgresAuthStore) UpdatePassword(email, hashedPassword string) error {
+	query := `
+        UPDATE users 
+        SET password_hash = $1, updated_at = NOW()
+        WHERE email = $2`
+
+	result, err := s.db.Exec(query, hashedPassword, email)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }
