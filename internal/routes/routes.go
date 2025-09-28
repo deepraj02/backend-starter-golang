@@ -19,6 +19,8 @@ func SetupRoutes(app *app.Application) *chi.Mux {
 		r.Post("/forgot-password", app.AuthHandler.ForgotPassword)
 		r.Post("/reset-password", app.AuthHandler.ResetPassword)
 
+		r.Get("/{provider}", app.AuthHandler.BeginOAuth)
+		r.Get("/{provider}/callback", app.AuthHandler.CompleteOAuth)
 		r.Group(func(r chi.Router) {
 			r.Use(app.Middleware.Authenticate)
 			r.Get("/profile", app.AuthHandler.Profile)

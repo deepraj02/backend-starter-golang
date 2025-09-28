@@ -109,6 +109,26 @@
                 color: #6b7280;
             }
 
+            .provider-badge {
+                display: inline-block;
+                padding: 0.25rem 0.75rem;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .provider-email {
+                background-color: #e0f2fe;
+                color: #0277bd;
+            }
+
+            .provider-google {
+                background-color: #ffebee;
+                color: #c62828;
+            }
+
             .loading {
                 text-align: center;
                 padding: 2rem;
@@ -163,6 +183,24 @@
             }
 
             function checkAuth() {
+                // First check if tokens are in URL parameters (from OAuth redirect)
+                const urlParams = new URLSearchParams(window.location.search);
+                const accessToken = urlParams.get('access_token');
+                const refreshToken = urlParams.get('refresh_token');
+                const userParam = urlParams.get('user');
+
+                if (accessToken && refreshToken && userParam) {
+                    // Store tokens from OAuth redirect
+                    localStorage.setItem('access_token', accessToken);
+                    localStorage.setItem('refresh_token', refreshToken);
+                    localStorage.setItem('user', decodeURIComponent(userParam));
+
+                    // Clean up URL
+                    window.history.replaceState({}, document.title, '/dashboard.html');
+                    return true;
+                }
+
+                // Check if tokens are in localStorage
                 const token = getToken();
                 if (!token) {
                     window.location.href = '/login.html';
@@ -193,11 +231,8 @@
                     if (response.ok) {
                         const result = await response.json();
                         displayProfile(result.data);
-
-                        
                         localStorage.setItem('user', JSON.stringify(result.data));
                     } else if (response.status === 401) {
-                        
                         logout();
                     } else {
                         throw new Error('Failed to fetch profile');
@@ -213,6 +248,8 @@
                 const userGreeting = document.getElementById('userGreeting');
 
                 userGreeting.textContent = `Hello, ${user.username}!`;
+
+                const providerClass = user.provider === 'email' ? 'provider-email' : `provider-${user.provider}`;
 
                 profileContainer.innerHTML = `
                 <div class="profile-card">
@@ -234,6 +271,12 @@
                         <div class="value">${user.bio || 'No bio provided'}</div>
                     </div>
                     <div class="profile-field">
+                        <label>Provider:</label>
+                        <div class="value">
+                            <span class="provider-badge ${providerClass}">${user.provider}</span>
+                        </div>
+                    </div>
+                    <div class="profile-field">
                         <label>Created At:</label>
                         <div class="value">${new Date(user.created_at).toLocaleString()}</div>
                     </div>
@@ -245,19 +288,19 @@
             `;
             }
 
-            
+            // Initialize dashboard
             if (checkAuth()) {
-                
+                // Try to display cached user data first
                 const cachedUser = getUserFromStorage();
                 if (cachedUser) {
                     displayProfile(cachedUser);
                     document.getElementById('userGreeting').textContent = `Hello, ${cachedUser.username}!`;
                 }
 
-                
+                // Then refresh with latest data
                 refreshProfile();
             }
         </script>
     </body>
 
-</html>s
+</html>
