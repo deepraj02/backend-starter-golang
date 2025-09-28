@@ -11,6 +11,7 @@ type User struct {
 	Email        string    `json:"email" db:"email"`
 	PasswordHash string    `json:"-" db:"password_hash"`
 	Bio          *string   `json:"bio" db:"bio"`
+	Provider     string    `json:"provider" db:"provider"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -44,6 +45,13 @@ type ResetPasswordRequest struct {
 	Code        string `json:"code"`
 	NewPassword string `json:"new_password"`
 }
+
+type OAuthUserRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Bio      string `json:"bio,omitempty"`
+	Provider string `json:"provider"`
+}
 type PostgresAuthStore struct {
 	db *sql.DB
 }
@@ -54,9 +62,11 @@ func NewPostgresAuthStore(db *sql.DB) *PostgresAuthStore {
 
 type AuthStore interface {
 	CreateUser(user *User) error
+	CreateOAuthUser(user *User) error
 	GetUserByUsername(username string) (*User, error)
 	GetUserByID(id int64) (*User, error)
 	GetUserByEmail(email string) (*User, error)
+	GetUserByEmailAndProvider(email, provider string) (*User, error)
 	UpdatePassword(email, hashedPassword string) error
 }
 
@@ -72,16 +82,28 @@ func (s *PostgresAuthStore) CreateUser(user *User) error {
 	return nil
 }
 
+func (s *PostgresAuthStore) CreateOAuthUser(user *User) error {
+	query := `INSERT INTO users (username, email, password_hash, bio, provider)
+        VALUES ($1, $2, '', $3, $4)
+        RETURNING id, created_at, updated_at`
+	err := s.db.QueryRow(query, user.Username, user.Email, user.Bio, user.Provider).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *PostgresAuthStore) GetUserByUsername(username string) (*User, error) {
 	user := User{}
 	query := `
-        SELECT id, username, email, password_hash, bio, created_at, updated_at
+        SELECT id, username, email, password_hash, bio, provider, created_at, updated_at
         FROM users
         WHERE username = $1`
 
 	err := s.db.QueryRow(query, username).Scan(
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Bio, &user.CreatedAt, &user.UpdatedAt,
+		&user.Bio, &user.Provider, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
@@ -119,13 +141,32 @@ func (s *PostgresAuthStore) GetUserByID(id int64) (*User, error) {
 func (s *PostgresAuthStore) GetUserByEmail(email string) (*User, error) {
 	user := User{}
 	query := `
-        SELECT id, username, email, password_hash, bio, created_at, updated_at
+        SELECT id, username, email, password_hash, bio, provider, created_at, updated_at
         FROM users
         WHERE email = $1`
 
 	err := s.db.QueryRow(query, email).Scan(
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
-		&user.Bio, &user.CreatedAt, &user.UpdatedAt,
+		&user.Bio, &user.Provider, &user.CreatedAt, &user.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (s *PostgresAuthStore) GetUserByEmailAndProvider(email, provider string) (*User, error) {
+	user := User{}
+	query := `
+        SELECT id, username, email, password_hash, bio, provider, created_at, updated_at
+        FROM users
+        WHERE email = $1 AND provider = $2`
+
+	err := s.db.QueryRow(query, email, provider).Scan(
+		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
+		&user.Bio, &user.Provider, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
